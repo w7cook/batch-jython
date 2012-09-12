@@ -152,6 +152,8 @@ import org.python.core.PyObject;
 import org.python.core.PyString;
 import org.python.core.PyUnicode;
 
+import org.python.antlr.ast.Batch;
+
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Iterator;
@@ -426,6 +428,7 @@ attr
     | WHILE
     | WITH
     | YIELD
+    | BATCH
     ;
 
 //decorator: '@' dotted_name [ '(' [arglist] ')' ] NEWLINE
@@ -1026,6 +1029,7 @@ compound_stmt
     | for_stmt
     | try_stmt
     | with_stmt
+    | batch_stmt
     | (decorators? DEF) => funcdef
     | classdef
     ;
@@ -1146,6 +1150,19 @@ with_stmt
       {
           stype = new With($WITH, actions.castExpr($test.tree), $with_var.etype,
               actions.castStmts($suite.stypes));
+      }
+    ;
+
+batch_stmt
+@init {
+    stmt stype = null;
+}
+@after {
+    $batch_stmt.tree = stype;
+}
+    : BATCH n=NAME COLON s1=suite[false]
+      {
+            stype = new Batch($BATCH, $n.getText(), $s1.stypes);
       }
     ;
 
@@ -2108,6 +2125,7 @@ TRY       : 'try' ;
 WHILE     : 'while' ;
 WITH      : 'with' ;
 YIELD     : 'yield' ;
+BATCH     : 'mybatch' ;
 
 LPAREN    : '(' {implicitLineJoiningLevel++;} ;
 

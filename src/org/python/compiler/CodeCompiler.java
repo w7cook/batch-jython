@@ -99,6 +99,11 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.Method;
 import static org.python.util.CodegenUtils.*;
 
+// BATCHES
+import org.python.antlr.ast.Batch;
+import batch.partition.*;
+// END
+
 public class CodeCompiler extends Visitor implements Opcodes, ClassConstants {
 
     private static final Object Exit = new Integer(1);
@@ -1437,6 +1442,47 @@ public class CodeCompiler extends Visitor implements Opcodes, ClassConstants {
         code.freeFinallyLocal(exc);
         handler.addExceptionHandlers(handler_start);
         return null;
+    }
+
+    @Override
+    public Object visitBatch(Batch node) throws Exception {
+        java.util.List<stmt> body = node.getInternalBody();
+        String remote = node.getInternalRemote();
+        ConvertVisitor visitor = new ConvertVisitor();
+        PExpr seq = (PExpr)(visitor.visitAll(body));
+        System.out.println(tbl);
+        
+        PExpr local = null;
+        if (seq == null) {
+            System.out.println("Null thing");
+        }
+        else {
+            System.out.println(seq.toString());
+            Environment env = new Environment(CodeModel.factory);
+            env = env.extend(remote, null, Place.REMOTE);
+            History h = seq.partition(Place.MOBILE, env);
+            System.out.println(h.toString());
+            //System.out.println(seq.toString());
+            System.out.println("Last is " + h.last().toString());
+            System.out.println(h.last().action());
+            local = h.last().action();
+        }
+        //System.out.println(body);
+        /*
+        String code = seq.runExtra(new ConvertFactory()).getString();
+        System.out.println(code);
+        BaseParser p = new BaseParser(new ANTLRStringStream(code), "hack.py", "ascii");
+        System.out.println("Made parser");
+        mod m = p.parseModule();
+        System.out.println("Made module");
+        Object ret = visit(m);
+        return ret;
+        */
+        //return visit(seq.runExtra(new ConvertFactory()).getTree());
+        //Call c = (Call)(local.runExtra(new ConvertFactory()).getTree());
+        return visit(local.runExtra(new ConvertFactory()));
+        //suite(node.getInternalBody());
+        //return null;
     }
 
     @Override
