@@ -1,6 +1,5 @@
 package org.python.antlr;
 
-import org.python.antlr.ast.Batch;
 import org.python.antlr.ast.VisitorBase;
 
 public class Visitor extends VisitorBase {
@@ -30,12 +29,6 @@ public class Visitor extends VisitorBase {
 
     protected Object unhandled_node(PythonTree node) throws Exception {
         return this;
-    }
-
-
-    @Override
-    public Object visitBatch(Batch batch) throws Exception {
-      throw new Error("SHOULD NOT HAPPEN??");
     }
 
 }
