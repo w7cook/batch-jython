@@ -170,7 +170,14 @@ public class ConvertVisitor extends Visitor {
             while (!vars.isEmpty()) {
                 let = ConvertVisitor.f.Let(vars.remove(0), value, let);
             }
-            return let;
+            // Only add to seqlist if there was something there before
+            if (seqlist.isEmpty()) {
+                return let;
+            }
+            else {
+                seqlist.add(let);
+                return ConvertVisitor.f.Prim(Op.SEQ, seqlist);
+            }
         }
     }
     
@@ -192,11 +199,50 @@ public class ConvertVisitor extends Visitor {
     }
     
     @Override
-    public Object visitAugAssign(AugAssign node) throws Exception {
-        expr target = node.getInternalTarget();
-        operatorType op = node.getInternalOp();
-        expr value = node.getInternalValue();
-        return ConvertVisitor.f.Assign((PExpr)visit(target), (PExpr)visit(value));
+    public Object visitPrint(Print node) throws Exception {
+        // Use the Other object...
+        java.util.List<PExpr> subs = new java.util.ArrayList<PExpr>();
+        if (node.getInternalDest() == null) {
+            subs.add(ConvertVisitor.f.Data(null));
+        }
+        else {
+            subs.add((PExpr)visit(node.getInternalDest()));
+        }
+        java.util.List<PExpr> values = new java.util.ArrayList<PExpr>();
+        for (expr e : node.getInternalValues()) {
+            values.add((PExpr)visit(e));
+        }
+        subs.add(ConvertVisitor.f.Data(values));
+        if (node.getInternalNl().booleanValue()) {
+            subs.add(ConvertVisitor.f.Data(new Integer(1)));
+        }
+        else {
+            subs.add(ConvertVisitor.f.Data(new Integer(0)));
+        }
+        return ConvertVisitor.f.Other(node, subs);
+    }
+    
+    @Override
+    public Object visitDelete(Delete node) throws Exception {
+        java.util.List<PExpr> subs = new java.util.ArrayList<PExpr>();
+        java.util.List<PExpr> targets = new java.util.ArrayList<PExpr>();
+        for (expr e : node.getInternalTargets()) {
+            targets.add((PExpr)visit(e));
+        }
+        subs.add(ConvertVisitor.f.Data(targets));
+        return ConvertVisitor.f.Other(node, subs);
+    }
+    
+    @Override
+    public Object visitPass(Pass node) throws Exception {
+        return ConvertVisitor.f.Other(node, new java.util.ArrayList<PExpr>());
+    }
+    
+    @Override
+    public Object visitYield(Yield node) throws Exception {
+        java.util.List<PExpr> subs = new java.util.ArrayList<PExpr>();
+        subs.add((PExpr)visit(node.getInternalValue()));
+        return ConvertVisitor.f.Other(node, subs);
     }
     
     @Override
@@ -205,6 +251,18 @@ public class ConvertVisitor extends Visitor {
         java.util.List<stmt> body = node.getInternalBody();
         java.util.List<stmt> orelse = node.getInternalOrelse();
         return ConvertVisitor.f.If((PExpr)(visit(test)), (PExpr)visitAll(body), (PExpr)visitAll(orelse));
+    }
+    
+    @Override
+    public Object visitFor(For node) throws Exception {
+        expr target = node.getInternalTarget();
+        expr iter = node.getInternalIter();
+        java.util.List<stmt> body = node.getInternalBody();
+        // First assume target is always just a variable...
+        if (target instanceof Name) {
+            return ConvertVisitor.f.Loop(((Name)target).getInternalId(), (PExpr)visit(iter), (PExpr)visitAll(body));
+        }
+        return null;    // Hopefully does not reach here...
     }
     
     public Object visitCompare(Compare node) throws Exception {
@@ -245,6 +303,14 @@ public class ConvertVisitor extends Visitor {
     }
     
     @Override
+    public Object visitAugAssign(AugAssign node) throws Exception {
+        expr target = node.getInternalTarget();
+        operatorType op = node.getInternalOp();
+        expr value = node.getInternalValue();
+        return ConvertVisitor.f.Assign((PExpr)visit(target), (PExpr)visit(value));
+    }
+    
+    @Override
     public Object visitCall(Call node) throws Exception {
         expr func = node.getInternalFunc();
         java.util.List<expr> args = node.getInternalArgs();
@@ -271,8 +337,25 @@ public class ConvertVisitor extends Visitor {
     }
     
     @Override
+    public Object visitList(List node) throws Exception {
+        java.util.List<expr> elts = node.getInternalElts();
+        java.util.List converted_elts = new java.util.ArrayList();
+        for (expr elt : elts) {
+            converted_elts.add(visit(elt));
+        }
+        return ConvertVisitor.f.Data(converted_elts);   // List should be Data
+    }
+    
+    @Override
     public Object visitNum(Num node) throws Exception {
-        return ConvertVisitor.f.Data(node.getN());
+        Integer n;
+        if (node.getInternalN() instanceof PyInteger) {
+            n = new Integer(((PyInteger)node.getInternalN()).getValue());
+        }
+        else {
+            n = (Integer)node.getInternalN();   // Probably not an Integer though...
+        }
+        return ConvertVisitor.f.Data(n);
     }
     
     @Override
@@ -282,7 +365,7 @@ public class ConvertVisitor extends Visitor {
     
     @Override
     public Object visitStr(Str node) throws Exception {
-        return null;
+        return ConvertVisitor.f.Data(((PyString)node.getInternalS()).getString());
     }
 }
 
