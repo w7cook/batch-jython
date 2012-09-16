@@ -123,9 +123,24 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
     }
     
     public PythonTree Data(Object value) {
-        // Numbers for now...
         // Wrap expr into Expr
-        return new Expr(new Num(new PyInteger(((Integer)value).intValue())));
+        if (value instanceof java.util.List) {
+            java.util.List<expr> elts = new java.util.ArrayList<expr>();
+            for (Object o : (java.util.List)value) {
+                expr elt = ((Expr)((PExpr)o).runExtra(this)).getInternalValue(); // Some crazy type-casting
+                elts.add(elt);
+            }
+            return new Expr(new List(new AstList(elts, AstAdapters.exprAdapter), AstAdapters.expr_context2py(expr_contextType.Load)));
+        }
+        if (value instanceof Integer) {
+            return new Expr(new Num(new PyInteger(((Integer)value).intValue())));
+        }
+        else if (value instanceof String) {
+            return new Expr(new Str(new PyString((String)value)));
+        }
+        else {
+            return new Expr(null);    // I hope to never each here..
+        }
     }
     
     public PythonTree Fun(String var, PythonTree body) {return null;}
@@ -265,7 +280,7 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
         ConvertOther visitor = new ConvertOther(subs, this);
         PythonTree ret = null;
         try {
-            ret = new PythonTree((PythonTree)visitor.visit(node));
+            ret = (PythonTree)visitor.visit(node);
         } catch (Exception e) {
             System.err.println("Error that should not have happened has occured");
             e.printStackTrace();
