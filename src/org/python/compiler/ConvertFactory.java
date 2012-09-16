@@ -239,7 +239,7 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
     }
     
     public PythonTree Call(PythonTree target, String method, java.util.List<PythonTree> args) {
-        Attribute func = new Attribute(target, new PyString(method), AstAdapters.expr_context2py(expr_contextType.Load));
+        Attribute func = new Attribute(((Expr)target).getInternalValue(), new PyString(method), AstAdapters.expr_context2py(expr_contextType.Load));
         java.util.List<expr> expr_args = new java.util.ArrayList<expr>();
         for (PythonTree t : args) {
             // The PythonTree only holds Expr type
