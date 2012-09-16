@@ -179,7 +179,7 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
     
     public PythonTree Prop(PythonTree base, String field) {
         // Wrap into Expr type
-        return new Expr(new Attribute(base, new PyString(field), AstAdapters.expr_context2py(expr_contextType.Load))); // Set context as load for now
+        return new Expr(new Attribute(((Expr)base).getInternalValue(), new PyString(field), AstAdapters.expr_context2py(expr_contextType.Load))); // Set context as load for now
     }
     
     public PythonTree Assign(Op op, PythonTree target, PythonTree source) {
