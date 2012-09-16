@@ -28,19 +28,31 @@ import java.util.ArrayList;
 @ExposedType(name = "_ast.Batch", base = AST.class)
 public class Batch extends stmt {
 public static final PyType TYPE = PyType.fromClass(Batch.class);
-    private java.util.List<stmt> body;
     private String remote;
+    private expr service;
+    private java.util.List<stmt> body;
     
     public String getInternalRemote() {
         return remote;
     }
-    @ExposedGet(name = "remote")    // Iffy...
+    @ExposedGet(name = "remote")
     public PyObject getRemote() {
         return new PyString(null, remote);
     }
-    @ExposedSet(name = "remote")    // Iffy...
+    @ExposedSet(name = "remote")
     public void setRemote(PyObject remote) {
         this.remote = remote.toString();
+    }
+    public expr getInternalService() {
+        return service;
+    }
+    @ExposedGet(name = "service")
+    public PyObject getService() {
+        return service;
+    }
+    @ExposedSet(name = "service")
+    public void setService(PyObject service) {
+        this.service = AstAdapters.py2expr(service);
     }
     public java.util.List<stmt> getInternalBody() {
         return body;
@@ -83,13 +95,16 @@ public static final PyType TYPE = PyType.fromClass(Batch.class);
         }
     }
     
-    public Batch(PyObject body) {
+    public Batch(PyObject remote, PyObject service, PyObject body) {
+        setRemote(remote);
+        setService(service);
         setBody(body);
     }
     
-    public Batch(Token token, String remote, java.util.List<stmt> body) {
+    public Batch(Token token, String remote, expr service, java.util.List<stmt> body) {
         super(token);
         this.remote = remote;
+        this.service = service;
         this.body = body;
         if (body == null) {
             this.body = new ArrayList<stmt>();
@@ -99,9 +114,10 @@ public static final PyType TYPE = PyType.fromClass(Batch.class);
         }
     }
     
-    public Batch(Integer ttype, Token token, String remote, java.util.List<stmt> body) {
+    public Batch(Integer ttype, Token token, String remote, expr service, java.util.List<stmt> body) {
         super(ttype, token);
         this.remote = remote;
+        this.service = service;
         this.body = body;
         if (body == null) {
             this.body = new ArrayList<stmt>();
@@ -111,9 +127,10 @@ public static final PyType TYPE = PyType.fromClass(Batch.class);
         }
     }
     
-    public Batch(PythonTree tree, String remote, java.util.List<stmt> body) {
+    public Batch(PythonTree tree, String remote, expr service, java.util.List<stmt> body) {
         super(tree);
         this.remote = remote;
+        this.service = service;
         this.body = body;
         if (body == null) {
             this.body = new ArrayList<stmt>();
@@ -129,7 +146,7 @@ public static final PyType TYPE = PyType.fromClass(Batch.class);
     }
     
     public String toStringTree() {
-        StringBuffer sb = new StringBuffer("While(");
+        StringBuffer sb = new StringBuffer("Batch(");
         sb.append("body=");
         sb.append(dumpThis(body));
         sb.append(")");
