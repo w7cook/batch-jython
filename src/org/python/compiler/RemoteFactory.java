@@ -105,18 +105,30 @@ public class RemoteFactory extends PartitionFactoryHelper<PythonTree> {
         this.service = service;
     }
     
+    private PythonTree gen(String method, java.util.List<expr> args) {
+        return new Call(new Attribute(service, new PyString(method), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None);
+    }
+    
     public PythonTree Var(String name) {
         java.util.List<expr> args = new java.util.ArrayList<expr>();
         args.add(new Str(new PyString(name)));
-        return new Call(new Attribute(service, new PyString("Var"), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None);
+        return gen("Var", args);
     }
     
     public PythonTree Data(Object value) {
         java.util.List<expr> args = new java.util.ArrayList<expr>();
-        if (value instanceof Integer) {
+        if (value instanceof java.util.List) {
+            java.util.List<expr> elts = new java.util.ArrayList<expr>();
+            for (Object o : (java.util.List)value) {
+                expr elt = ((Expr)((PExpr)o).runExtra(this)).getInternalValue();
+                elts.add(elt);
+            }
+            args.add(new List(new AstList(elts, AstAdapters.exprAdapter), AstAdapters.expr_context2py(expr_contextType.Load)));
+        }
+        else if (value instanceof Integer) {
             args.add(new Num(new PyInteger((Integer)(value))));
         }
-        return new Call(new Attribute(service, new PyString("Data"), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(args, AstAdatpers.exprAdatper), Py.None, Py.None, Py.None);
+        return gen("Data", args);
     }
     
     public PythonTree Fun(String var, PythonTree body) {return null;}
@@ -130,19 +142,53 @@ public class RemoteFactory extends PartitionFactoryHelper<PythonTree> {
         }
         prim_args.add(new List(new AstList(args_args, AstAdapters.exprAdapter), AstAdapters.expr_context2py(expr_contextType.Load)));
         
-        return new Call(new Attribute(service, new PyString("Prim"), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(prim_args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None);
+        return gen("Prim", prim_args);
         
     }
     
-    public PythonTree Prop(PythonTree base, String field) {return null;}
+    public PythonTree Prop(PythonTree base, String field) {
+        java.util.List<expr> args = new java.util.ArrayList<expr>();
+        args.add((expr)base);   // Assume base is a proper expr
+        args.add(new Str(new PyString(field)));
+        
+        return gen("Prop", args);
+    }
     
-    public PythonTree Assign(Op op, PythonTree target, PythonTree srouce) {return null;}
+    public PythonTree Assign(Op op, PythonTree target, PythonTree source) {
+        java.util.List<expr> args = new java.util.ArrayList<expr>();
+        args.add(new Str(new PyString(op.toString())));
+        args.add((expr)target);     // Assume target and source are proper expr
+        args.add((expr)source);
+        
+        return gen("Assign", args);
+    }
     
-    public PythonTree Let(String var, PythonTree expression, PythonTree body) {return null;}
+    public PythonTree Let(String var, PythonTree expression, PythonTree body) {
+        java.util.List<expr> args = new java.util.ArrayList<expr>();
+        args.add(new Str(new PyString(var)));
+        args.add((expr)expression);     // Assume expression and body are proper expr...
+        args.add((expr)body);           // ...Might not be true here...
+        
+        return gen("Let", args);
+    }
     
-    public PythonTree If(PythonTree condition, PythonTree thenExp, PythonTree elseExp) {return null;}
+    public PythonTree If(PythonTree condition, PythonTree thenExp, PythonTree elseExp) {
+        java.util.List<expr> args = new java.util.ArrayList<expr>();
+        args.add((expr)condition);
+        args.add((expr)thenExp);    // thenExp and elseExp might not be proper expr...
+        args.add((expr)elseExp);
+        
+        return gen("If", args);
+    }
     
-    public PythonTree Loop(String var, PythonTree collection, PythonTree bocy) {return null;}
+    public PythonTree Loop(String var, PythonTree collection, PythonTree body) {
+        java.util.List<expr> args = new java.util.ArrayList<expr>();
+        args.add(new Str(new PyString(var)));
+        args.add((expr)collection);     // These might not be proper expr...
+        args.add((expr)body);
+        
+        return gen("Loop", args);
+    }
     
     public PythonTree Call(PythonTree target, String method, java.util.List<PythonTree> args) {
         java.util.List<expr> call_args = new java.util.ArrayList<expr>();
@@ -153,7 +199,7 @@ public class RemoteFactory extends PartitionFactoryHelper<PythonTree> {
             args_args.add((expr)p);
         }
         call_args.add(new List(new AstList(args_args, AstAdapters.exprAdapter), AstAdapters.expr_context2py(expr_contextType.Load)));
-        return new Call(new Attribute(service, new PyString("Call"), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(call_args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None);
+        return gen("Call", call_args);
     }
     
     public PythonTree In(String location) {return null;}
@@ -200,3 +246,4 @@ public class RemoteFactory extends PartitionFactoryHelper<PythonTree> {
     }
     
 }
+
