@@ -12,4 +12,12 @@ mybatch r in f :
         x = 0
         print "While"
     r.foo()
+    r.y
+    for i in [1, 2, 3]  :
+        r.call()
+        break
+    if x :
+        r.hello()
+    else :
+        r.bye()
 print "Hello World"
