@@ -239,6 +239,11 @@ public class ConvertVisitor extends Visitor {
     }
     
     @Override
+    public Object visitBreak(Break node) throws Exception {
+        return ConvertVisitor.f.Other(node, new java.util.ArrayList<PExpr>());
+    }
+    
+    @Override
     public Object visitYield(Yield node) throws Exception {
         java.util.List<PExpr> subs = new java.util.ArrayList<PExpr>();
         subs.add((PExpr)visit(node.getInternalValue()));

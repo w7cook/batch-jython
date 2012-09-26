@@ -148,6 +148,11 @@ public class ConvertOther extends Visitor {
     }
     
     @Override
+    public Object visitBreak(Break node) {
+        return node;
+    }
+    
+    @Override
     public Object visitYield(Yield node) {
         expr value = ((Expr)subs.get(0)).getInternalValue();
         node.setValue(value);
