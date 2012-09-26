@@ -1,5 +1,8 @@
 class BatchRemote :
     
+    def execute(self, expr) :
+        print expr
+    
     def Var(self, name) :
         return "(Var " + name + ")"
     
@@ -7,7 +10,7 @@ class BatchRemote :
         return "(Data " + str(x) + ")"
     
     def Prim(self, op, args) :
-        return "(" + op + " " + args + ")"
+        return "(" + op + " " + str(args) + ")"
     
     def Prop(self, base, field) :
         return "(Prop " + base + field + ")"
@@ -25,5 +28,5 @@ class BatchRemote :
         return "(For " + var + " in " + collection + " do " + body + ")"
     
     def Call(self, target, method, args) :
-        return "(Call " + target + " " + method + " " + args + ")"
+        return "(Call " + target + " " + method + " " + str(args) + ")"
 
