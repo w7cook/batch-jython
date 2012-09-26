@@ -13,10 +13,10 @@ class BatchRemote :
         return "(" + op + " " + str(args) + ")"
     
     def Prop(self, base, field) :
-        return "(Prop " + base + field + ")"
+        return "(Prop " + base + " " +  field + ")"
     
     def Assign(self, op, target, source) :
-        return "(Assign " + op + target + source + ")"
+        return "(Assign " + op + " " + target + " " + source + ")"
     
     def Let(self, var, expression, body) :
         return "(Let " + var + "=" + expression + " in " + body + ")"
