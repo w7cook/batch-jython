@@ -104,6 +104,11 @@ import org.python.antlr.ast.Batch;
 import batch.partition.*;
 // END
 
+// ADAPTERS
+import org.python.antlr.adapter.AstAdapters;
+import org.python.core.AstList;
+// END
+
 public class CodeCompiler extends Visitor implements Opcodes, ClassConstants {
 
     private static final Object Exit = new Integer(1);
@@ -1448,11 +1453,14 @@ public class CodeCompiler extends Visitor implements Opcodes, ClassConstants {
     public Object visitBatch(Batch node) throws Exception {
         java.util.List<stmt> body = node.getInternalBody();
         String remote = node.getInternalRemote();
+        expr service = node.getInternalService();
         ConvertVisitor visitor = new ConvertVisitor();
         PExpr seq = (PExpr)(visitor.visitAll(body));
         System.out.println(tbl);
         
-        PExpr local = null;
+        PExpr first_local = null;
+        PExpr remote_expr = null;
+        PExpr second_local = null;
         if (seq == null) {
             System.out.println("Null thing");
         }
@@ -1463,9 +1471,30 @@ public class CodeCompiler extends Visitor implements Opcodes, ClassConstants {
             History h = seq.partition(Place.MOBILE, env);
             System.out.println(h.toString());
             //System.out.println(seq.toString());
-            System.out.println("Last is " + h.last().toString());
-            System.out.println(h.last().action());
-            local = h.last().action();
+            // Assume three stage, at most LOCAL -> REMOTE -> LOCAL
+            if (h.length() == 1) {
+                if (h.get(0).place().toString().equals("LOCAL")) {
+                    first_local = h.get(0).action();
+                }
+                else if (h.get(0).place().toString().equals("REMOTE")) {
+                    remote_expr = h.get(0).action();
+                }
+            }
+            else if (h.length() == 2) {
+                if (h.get(0).place().toString().equals("LOCAL")) {
+                    first_local = h.get(0).action();
+                    remote_expr = h.get(1).action();
+                }
+                else if (h.get(0).place().toString().equals("REMOTE")) {
+                    remote_expr = h.get(0).action();
+                    second_local = h.get(1).action();
+                }
+            }
+            else if (h.length() == 3) {
+                first_local = h.get(0).action();
+                remote_expr = h.get(1).action();
+                second_local = h.get(2).action();
+            }
         }
         //System.out.println(body);
         /*
@@ -1480,9 +1509,27 @@ public class CodeCompiler extends Visitor implements Opcodes, ClassConstants {
         */
         //return visit(seq.runExtra(new ConvertFactory()).getTree());
         //Call c = (Call)(local.runExtra(new ConvertFactory()).getTree());
-        return visit(local.runExtra(new ConvertFactory()));
+        java.util.List<stmt> new_body = new java.util.ArrayList<stmt>();
+        if (first_local != null) {
+            System.out.println("First local");
+            visit(first_local.runExtra(new ConvertFactory()));
+        }
+        // For remote, make a call to the service object
+        java.util.List<expr> args = new java.util.ArrayList<expr>();
+        args.add((expr)remote_expr.runExtra(new RemoteFactory(service)));
+        if (remote_expr != null) {
+            System.out.println("Remote");
+            //visit(new Call(new Attribute(service, new PyString("execute"), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None));
+            java.util.List<expr> targets = new java.util.ArrayList<expr>();
+            targets.add(new Name(new PyString("forest"), AstAdapters.expr_context2py(expr_contextType.Store)));
+            visit(new Assign(new AstList(targets, AstAdapters.exprAdapter), new Call(new Attribute(service, new PyString("execute"), AstAdapters.expr_context2py(expr_contextType.Load)), new AstList(args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None)));
+        }
+        if (second_local != null) {
+            System.out.println("Second local");
+            visit(second_local.runExtra(new ConvertFactory()));
+        }
         //suite(node.getInternalBody());
-        //return null;
+        return null;
     }
 
     @Override

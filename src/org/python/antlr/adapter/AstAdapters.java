@@ -285,6 +285,15 @@ public class AstAdapters {
         if (o instanceof Boolean) {
             return (Boolean)o;
         }
+        // Seems to be broken implementation, so this is a fix...
+        if (o instanceof PyBoolean) {
+            if (o == Py.True) {
+                return new Boolean(true);
+            }
+            else if (o == Py.False) {
+                return new Boolean(false);
+            }
+        }
         return null;
     }
 

@@ -123,9 +123,24 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
     }
     
     public PythonTree Data(Object value) {
-        // Numbers for now...
         // Wrap expr into Expr
-        return new Expr(new Num(new PyInteger(((Integer)value).intValue())));
+        if (value instanceof java.util.List) {
+            java.util.List<expr> elts = new java.util.ArrayList<expr>();
+            for (Object o : (java.util.List)value) {
+                expr elt = ((Expr)((PExpr)o).runExtra(this)).getInternalValue(); // Some crazy type-casting
+                elts.add(elt);
+            }
+            return new Expr(new List(new AstList(elts, AstAdapters.exprAdapter), AstAdapters.expr_context2py(expr_contextType.Load)));
+        }
+        if (value instanceof Integer) {
+            return new Expr(new Num(new PyInteger(((Integer)value).intValue())));
+        }
+        else if (value instanceof String) {
+            return new Expr(new Str(new PyString((String)value)));
+        }
+        else {
+            return new Expr(null);    // I hope to never each here..
+        }
     }
     
     public PythonTree Fun(String var, PythonTree body) {return null;}
@@ -164,7 +179,7 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
     
     public PythonTree Prop(PythonTree base, String field) {
         // Wrap into Expr type
-        return new Expr(new Attribute(base, new PyString(field), AstAdapters.expr_context2py(expr_contextType.Load))); // Set context as load for now
+        return new Expr(new Attribute(((Expr)base).getInternalValue(), new PyString(field), AstAdapters.expr_context2py(expr_contextType.Load))); // Set context as load for now
     }
     
     public PythonTree Assign(Op op, PythonTree target, PythonTree source) {
@@ -224,7 +239,7 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
     }
     
     public PythonTree Call(PythonTree target, String method, java.util.List<PythonTree> args) {
-        Attribute func = new Attribute(target, new PyString(method), AstAdapters.expr_context2py(expr_contextType.Load));
+        Attribute func = new Attribute(((Expr)target).getInternalValue(), new PyString(method), AstAdapters.expr_context2py(expr_contextType.Load));
         java.util.List<expr> expr_args = new java.util.ArrayList<expr>();
         for (PythonTree t : args) {
             // The PythonTree only holds Expr type
@@ -233,7 +248,13 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
         return new Expr(new Call(func, new AstList(expr_args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None)); // No such thing as keywords, starargs, or kwargs in batch language
     }
     
-    public PythonTree In(String location) {return null;}
+    public PythonTree In(String location) {
+        // For In, just access the generic dictionary name
+            Attribute dict = new Attribute(new Name(new PyString("forest"), AstAdapters.expr_context2py(expr_contextType.Load)), new PyString("get"), AstAdapters.expr_context2py(expr_contextType.Load));
+            java.util.List<expr> args = new java.util.ArrayList<expr>();
+            args.add(new Str(new PyString(location)));
+        return new Expr(new Call(dict, new AstList(args, AstAdapters.exprAdapter), Py.None, Py.None, Py.None));
+    }
     
     public PythonTree Out(String location, PythonTree expression) {return null;}
     
@@ -265,7 +286,7 @@ public class ConvertFactory extends PartitionFactoryHelper<PythonTree> {
         ConvertOther visitor = new ConvertOther(subs, this);
         PythonTree ret = null;
         try {
-            ret = new PythonTree((PythonTree)visitor.visit(node));
+            ret = (PythonTree)visitor.visit(node);
         } catch (Exception e) {
             System.err.println("Error that should not have happened has occured");
             e.printStackTrace();

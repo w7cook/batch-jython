@@ -145,15 +145,15 @@ public class ConvertVisitor extends Visitor {
     public Object visitAll(java.util.List<stmt> body) throws Exception {
         // Check if there's nothing left
         if (body.isEmpty()) {
-            System.out.println("It's empty body?");
-            return null;
+            //System.out.println("It's empty body?");
+            return ConvertVisitor.f.Prim(Op.SEQ, new java.util.ArrayList<PExpr>());
         }
         if (body.size() == 1) {
             return visit(body.get(0));
         }
         
         // Slowly visit each stmt and add to a list for SEQ
-        ArrayList<PExpr> seqlist = new ArrayList<PExpr>();
+        java.util.List<PExpr> seqlist = new java.util.ArrayList<PExpr>();
         try {
             while (!body.isEmpty()) {
                 stmt cur = body.remove(0);
@@ -239,6 +239,11 @@ public class ConvertVisitor extends Visitor {
     }
     
     @Override
+    public Object visitBreak(Break node) throws Exception {
+        return ConvertVisitor.f.Other(node, new java.util.ArrayList<PExpr>());
+    }
+    
+    @Override
     public Object visitYield(Yield node) throws Exception {
         java.util.List<PExpr> subs = new java.util.ArrayList<PExpr>();
         subs.add((PExpr)visit(node.getInternalValue()));
@@ -251,6 +256,20 @@ public class ConvertVisitor extends Visitor {
         java.util.List<stmt> body = node.getInternalBody();
         java.util.List<stmt> orelse = node.getInternalOrelse();
         return ConvertVisitor.f.If((PExpr)(visit(test)), (PExpr)visitAll(body), (PExpr)visitAll(orelse));
+    }
+    
+    @Override
+    public Object visitWhile(While node) throws Exception {
+        expr test = node.getInternalTest();
+        java.util.List<stmt> body = node.getInternalBody();
+        java.util.List<stmt> orelse = node.getInternalOrelse();
+        
+        java.util.List<PExpr> subs = new java.util.ArrayList<PExpr>();
+        subs.add((PExpr)visit(test));
+        subs.add((PExpr)visitAll(body));
+        subs.add((PExpr)visitAll(orelse));
+        
+        return ConvertVisitor.f.Other(node, subs);
     }
     
     @Override

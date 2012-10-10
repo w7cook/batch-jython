@@ -1160,9 +1160,9 @@ batch_stmt
 @after {
     $batch_stmt.tree = stype;
 }
-    : BATCH n=NAME COLON s1=suite[false]
+    : BATCH n=NAME IN e=expr[expr_contextType.Load] COLON s1=suite[false]
       {
-            stype = new Batch($BATCH, $n.getText(), $s1.stypes);
+            stype = new Batch($BATCH, $n.getText(), actions.castExpr($e.tree), $s1.stypes);
       }
     ;
 

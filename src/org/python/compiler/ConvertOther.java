@@ -148,9 +148,38 @@ public class ConvertOther extends Visitor {
     }
     
     @Override
+    public Object visitBreak(Break node) {
+        return node;
+    }
+    
+    @Override
     public Object visitYield(Yield node) {
         expr value = ((Expr)subs.get(0)).getInternalValue();
         node.setValue(value);
+        return node;
+    }
+    
+    @Override
+    public Object visitWhile(While node) {
+        expr test = ((Expr)subs.get(0)).getInternalValue();
+        // Both body and orelse will end up in Suite or one stmt
+        java.util.List<stmt> body = new java.util.ArrayList<stmt>();
+        if (subs.get(1) instanceof Suite) {
+            body = ((Suite)subs.get(1)).getInternalBody();
+        }
+        else {
+            body.add((stmt)subs.get(1));
+        }
+        java.util.List<stmt> orelse = new java.util.ArrayList<stmt>();
+        if (subs.get(2) instanceof Suite) {
+            orelse = ((Suite)subs.get(2)).getInternalBody();
+        }
+        else {
+            orelse.add((stmt)subs.get(2));
+        }
+        node.setTest(test);
+        node.setBody(new AstList(body, AstAdapters.stmtAdapter));
+        node.setOrelse(new AstList(orelse, AstAdapters.stmtAdapter));
         return node;
     }
 }
